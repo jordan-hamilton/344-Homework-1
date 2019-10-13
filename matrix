@@ -45,22 +45,22 @@ transposeMatrix() {
 
   rowCount=$(getDims "$transposeFile" | cut -f1 -d" ")
   colCount=$(getDims "$transposeFile" | cut -f2 -d" ")
-  index=1
-  echo "$rowCount" columns
-  echo "$colCount" columns
-  echo Original:
-  cat "$transposeFile"
-  echo Parsing input:
-  while read -r line
+  colToWrite=1
+
+  for ((colToRead = 1; colToRead <= colCount; colToRead++))
   do
-    #echo here $myLine there
-    for ((number = 1; number <= colCount; number++))
+    while read -r line
     do
-      echo -e "$line" | cut -d' ' -f$number >> "$cutFile"
-      #[ "$number" -ne "$colCount" ] && [ $index -ne "$rowCount" ] && printf "\t"
-      ((index++))
-    done
-  done < "$transposeFile"
+      [ "$colToWrite" -ne "1" ] && printf "\t" >> "$cutFile"
+      printf "$(echo "$line" | cut -d$'\t' -f$colToRead)" >> "$cutFile"
+      ((colToWrite++))
+    done < "$transposeFile"
+    printf '\n' >> "$cutFile"
+    # Reset the column we're writing to so we can tab before printing an integer
+    # in all columns after the first column
+    colToWrite=1
+  done
+  cat "$cutFile"
   rm -f "$transposeFile" #DEBUG
   rm -f "$cutFile" #DEBUG
 }
