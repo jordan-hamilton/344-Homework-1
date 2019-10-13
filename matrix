@@ -57,7 +57,7 @@ transposeMatrix() {
     for ((number = 1; number <= colCount; number++))
     do
       echo -e "$line" | cut -d' ' -f$number >> "$cutFile"
-      [ "$number" -ne "$colCount" ] && [ $index -ne "$rowCount" ] && printf "\t"
+      #[ "$number" -ne "$colCount" ] && [ $index -ne "$rowCount" ] && printf "\t"
       ((index++))
     done
   done < "$transposeFile"
