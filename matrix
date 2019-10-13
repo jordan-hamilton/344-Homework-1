@@ -87,13 +87,13 @@ getMean() {
 addMatrix() {
   [ ! -r "$1" ] || [ ! -r "$2" ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
   [ "$(getDims "$1")" != "$(getDims "$2")" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
-  echo "Good to go!" #TODO
+  echo "Good to add!" #TODO
 }
 
 multiplyMatrix() {
-  [ ! -r $1 ] || [ ! -r $2 ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
-  [ "$(getDims $1)" != "$(getDims $2)" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
-  echo "Good to go!" #TODO
+  [ ! -r "$1" ] || [ ! -r "$2" ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  [ "$(getDims "$1")" != "$(getDims "$2")" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
+  echo "Good to multiply!" #TODO
 }
 
 checkParameters() {
