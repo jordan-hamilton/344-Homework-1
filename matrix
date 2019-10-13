@@ -7,12 +7,20 @@ getDims() {
     cat > "$dimsFile"
   else
     checkParameters 1 "$@"
-    [ -r "$1" ] && cat "$1" > "$dimsFile" || { echo "The file specified does not exist." >&2; exit 4; }
+
+    if [ ! -r "$1" ]
+    then
+      echo "The file specified does not exist." >&2
+      exit 4
+    else
+      cat "$1" > "$dimsFile"
+    fi
+
   fi
 
   rowCount=$(wc -l < "$dimsFile")
   colCount=$(head -1 < "$dimsFile" | tr '\t' '\n' | wc -l)
-  echo $rowCount $colCount
+  echo "$rowCount" "$colCount"
   rm -f "$dimsFile" #DEBUG
 }
 
@@ -24,22 +32,31 @@ transposeMatrix() {
     cat > "$transposeFile"
   else
     checkParameters 1 "$@"
-    [ -r "$1" ] && cat "$1" > "$transposeFile" || { echo "The file specified does not exist." >&2; exit 4; }
+
+    if [ ! -r "$1" ]
+    then
+      echo "The file specified does not exist." >&2
+      exit 4
+    else
+      cat "$1" > "$transposeFile"
+    fi
+
   fi
+
   rowCount=$(getDims "$transposeFile" | cut -f1 -d" ")
   colCount=$(getDims "$transposeFile" | cut -f2 -d" ")
   index=1
-  echo $rowCount columns
-  echo $colCount columns
+  echo "$rowCount" columns
+  echo "$colCount" columns
   echo Original:
-  cat $transposeFile
+  cat "$transposeFile"
   echo Parsing input:
-  while read line
+  while read -r line
   do
     #echo here $myLine there
-    for ((number = 1; number <= $colCount; number++))
+    for ((number = 1; number <= colCount; number++))
     do
-      echo -e $line | cut -d' ' -f$number >> "$cutFile"
+      echo -e "$line" | cut -d' ' -f$number >> "$cutFile"
       [ "$number" -ne "$colCount" ] && [ $index -ne "$rowCount" ] && printf "\t"
       ((index++))
     done
@@ -55,15 +72,21 @@ getMean() {
     cat > "$meanFile"
   else
     checkParameters 1 "$@"
-    [ -r "$1" ] && cat "$1" > "$meanFile" || { echo "The file specified does not exist." >&2; exit 4; }
+    if [ ! -r "$1" ]
+    then
+      echo "The file specified does not exist." >&2
+      exit 4
+    else
+      cat "$1" > "$meanFile"
+    fi
   fi
 
   rm -f "$meanFile" #DEBUG
 }
 
 addMatrix() {
-  [ ! -r $1 ] || [ ! -r $2 ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
-  [ "$(getDims $1)" != "$(getDims $2)" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
+  [ ! -r "$1" ] || [ ! -r "$2" ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  [ "$(getDims "$1")" != "$(getDims "$2")" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
   echo "Good to go!" #TODO
 }
 
