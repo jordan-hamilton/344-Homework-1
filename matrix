@@ -1,0 +1,108 @@
+#!/bin/bash
+
+getDims() {
+  dimsFile="dimsTemp.$$"
+  if [ "$#" -eq "0" ]
+  then
+    cat > "$dimsFile"
+  else
+    checkParameters 1 "$@"
+    [ -r "$1" ] && cat "$1" > "$dimsFile" || { echo "The file specified does not exist." >&2; exit 4; }
+  fi
+
+  rowCount=$(wc -l < "$dimsFile")
+  colCount=$(head -1 < "$dimsFile" | tr '\t' '\n' | wc -l)
+  echo $rowCount $colCount
+  rm -f "$dimsFile" #DEBUG
+}
+
+transposeMatrix() {
+  transposeFile="transposeTemp.$$"
+  cutFile="cutTemp.$$"
+  if [ "$#" -eq "0" ]
+  then
+    cat > "$transposeFile"
+  else
+    checkParameters 1 "$@"
+    [ -r "$1" ] && cat "$1" > "$transposeFile" || { echo "The file specified does not exist." >&2; exit 4; }
+  fi
+  rowCount=$(getDims "$transposeFile" | cut -f1 -d" ")
+  colCount=$(getDims "$transposeFile" | cut -f2 -d" ")
+  index=1
+  echo $rowCount columns
+  echo $colCount columns
+  echo Original:
+  cat $transposeFile
+  echo Parsing input:
+  while read line
+  do
+    #echo here $myLine there
+    for ((number = 1; number <= $colCount; number++))
+    do
+      echo -e $line | cut -d' ' -f$number >> "$cutFile"
+      [ "$number" -ne "$colCount" ] && [ $index -ne "$rowCount" ] && printf "\t"
+      ((index++))
+    done
+  done < "$transposeFile"
+  rm -f "$transposeFile" #DEBUG
+  rm -f "$cutFile" #DEBUG
+}
+
+getMean() {
+  meanFile="meanTemp.$$"
+  if [ "$#" -eq "0" ]
+  then
+    cat > "$meanFile"
+  else
+    checkParameters 1 "$@"
+    [ -r "$1" ] && cat "$1" > "$meanFile" || { echo "The file specified does not exist." >&2; exit 4; }
+  fi
+
+  rm -f "$meanFile" #DEBUG
+}
+
+addMatrix() {
+  [ ! -r $1 ] || [ ! -r $2 ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  [ "$(getDims $1)" != "$(getDims $2)" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
+  echo "Good to go!" #TODO
+}
+
+multiplyMatrix() {
+  [ ! -r $1 ] || [ ! -r $2 ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  [ "$(getDims $1)" != "$(getDims $2)" ] && { echo "We couldn't perform this operation on matrices of different dimensions." >&2; exit 11; }
+  echo "Good to go!" #TODO
+}
+
+checkParameters() {
+  [ "$#" -ne "$(($1 + 1))" ] && { echo "Invalid number of arguments for this operation" >&2; exit 3; }
+}
+
+getCommand() {
+  [ "$#" -eq "0" ] && { echo "No arguments provided." >&2; exit 1; }
+  case $1 in
+    dims)
+      getDims "${@:2}"
+    ;;
+    transpose)
+      transposeMatrix "${@:2}"
+    ;;
+    mean)
+      getMean "${@:2}"
+    ;;
+    add)
+      checkParameters 2 "${@:2}"
+      addMatrix "${@:2}"
+    ;;
+    multiply)
+      checkParameters 2 "${@:2}"
+      multiplyMatrix "${@:2}"
+    ;;
+    *)
+      echo "Invalid argument" >&2; exit 2
+    ;;
+  esac
+}
+
+getCommand "$@"
+
+exit 0
