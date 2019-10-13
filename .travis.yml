@@ -1,6 +1,6 @@
 language: shell
 script:
-  - bash -c 'shopt -s globstar nullglob; shellcheck **/matrix'
+  - bash -c 'shellcheck --version; shopt -s globstar nullglob; shellcheck **/matrix'
 addons:
   apt:
     packages:
