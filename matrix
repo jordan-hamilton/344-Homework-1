@@ -6,15 +6,20 @@ cutFile="cutTemp.$$"
 meanFile="meanTemp.$$"
 calcMeanFile="calcMeanTemp.$$"
 addFile="addTemp.$$"
+multiplyFile="multiplyTemp.$$"
 
-trap 'rm -f $dimsFile $transposeFile $cutFile $meanFile $calcMeanFile $addFile' INT HUP TERM EXIT
+# Remove all temp files
+trap 'rm -f $dimsFile $transposeFile $cutFile $meanFile $calcMeanFile $addFile $multiplyFile' INT HUP TERM EXIT
 
 getDims() {
+  # Assume we're reading from stdin if no arguments were provided.
+  # Otherwise, confirm there is exactly one argument passed corresponding to a
+  # readable file
   if [ "$#" -eq "0" ]
   then
     cat > "$dimsFile"
   else
-    checkParameters 1 "$@"
+    checkArgs 1 "$@"
 
     if [ ! -r "$1" ]
     then
@@ -27,16 +32,21 @@ getDims() {
   fi
 
   rowCount=$(wc -l < "$dimsFile")
+  # Look at only the first line in a matrix and convert each tab into a newline,
+  # then count the number of lines to get the number of columns.
   colCount=$(head -1 < "$dimsFile" | tr '\t' '\n' | wc -l)
   echo "$rowCount" "$colCount"
 }
 
 transposeMatrix() {
+  # Assume we're reading from stdin if no arguments were provided.
+  # Otherwise, confirm there is exactly one argument passed corresponding to a
+  # readable file
   if [ "$#" -eq "0" ]
   then
     cat > "$transposeFile"
   else
-    checkParameters 1 "$@"
+    checkArgs 1 "$@"
 
     if [ ! -r "$1" ]
     then
@@ -51,6 +61,9 @@ transposeMatrix() {
   totalCols=$(getDims "$transposeFile" | cut -f2 -d" ")
   colToWrite=1
 
+  # Loop through the matrix a number of times equal to the number of columns.
+  # Look at the value in the fixed column on each line, outputting it to a temporary
+  # file and formatting with tabs where appropriate.
   for ((colToRead = 1; colToRead <= totalCols; colToRead++))
   do
 
@@ -71,11 +84,14 @@ transposeMatrix() {
 }
 
 getMean() {
+  # Assume we're reading from stdin if no arguments were provided.
+  # Otherwise, confirm there is exactly one argument passed corresponding to a
+  # readable file
   if [ "$#" -eq "0" ]
   then
     cat > "$meanFile"
   else
-    checkParameters 1 "$@"
+    checkArgs 1 "$@"
 
     if [ ! -r "$1" ]
     then
@@ -95,14 +111,18 @@ getMean() {
   do
     sum=0
 
+    # Sum all rows of one fixed column on the provided matrix.
     while read -r line
     do
       (( sum += "$(echo -n "$line" | cut -d$'\t' -f$colToRead)" ))
     done < "$meanFile"
 
+    # Calculate the rounded average (using the formula on the assignment page).
     avg=$(((sum + (totalRows/2)*( (sum>0)*2-1 )) / totalRows))
+
     printf "%d" "$avg" >> "$calcMeanFile"
     [ "$colToWrite" -ne "$totalCols" ] && printf "\t" >> "$calcMeanFile"
+
     ((colToWrite++))
   done
 
@@ -112,13 +132,14 @@ getMean() {
 }
 
 addMatrices() {
+  # Confirm there were exactly two arguments passed corresponding to readable files
   [ ! -r "$1" ] || [ ! -r "$2" ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  # Verify the number of rows and columns are exactly the same for both matrices
   [ "$(getDims "$1")" != "$(getDims "$2")" ] && { echo "We couldn't perform this operation on matrices of incompatible dimensions." >&2; exit 11; }
 
   totalRows=$(getDims "$1" | cut -f1 -d" ")
   totalCols=$(getDims "$1" | cut -f2 -d" ")
   m1Row=1
-
 
   while read -r m1Line
   do
@@ -126,7 +147,8 @@ addMatrices() {
 
     while read -r m2Line
     do
-
+      # Sum the numbers in the same column if we're looking at the same row in
+      # both matrices, then output the result
       if [[ "$m1Row" -eq "$m2Row" ]]
       then
         for ((colToRead = 1; colToRead <= totalCols; colToRead++))
@@ -149,15 +171,59 @@ addMatrices() {
 }
 
 multiplyMatrices() {
+  # Confirm there were exactly two arguments passed corresponding to readable files
   [ ! -r "$1" ] || [ ! -r "$2" ] && { echo "We couldn't detect one or both of the supplied matrices" >&2; exit 10; }
+  # Verify the number of columns in the first matrix is exactly equal to the number
+  # of rows in the second matrix
   [ "$(getDims "$1" | cut -f2 -d" ")" -ne "$(getDims "$2" | cut -f1 -d" ")" ] && { echo "We couldn't perform this operation on matrices of incompatible dimensions." >&2; exit 11; }
-  echo "Good to multiply!" #TODO
+
+  m2Cols=$(getDims "$2" | cut -f2 -d" ")
+
+  while read -r m1Line
+  do
+    # Loop a number of times equal to the number columns in the second matrix,
+    # since we'll need to multiply by each row in the first matrix by each column
+    # in the second.
+    for ((i = 1; i <= m2Cols; i++))
+    do
+      j=1
+      sum=0
+
+      # Multiply the number in the incrementing column (j) in the first matrix
+      # by the number in the fixed column (i) in the second matrix and repeat,
+      # summing the result until we've multiplied a complete row in the first
+      # matrix by a complete column of the second matrix
+      while read -r m2Line
+      do
+        m1Num=$(echo -n "$m1Line" | cut -d$'\t' -f$j)
+        m2Num=$(echo -n "$m2Line" | cut -d$'\t' -f$i)
+        ((sum += m1Num * m2Num))
+        ((j++))
+      done < "$2"
+
+      printf "%d" "$sum" >> "$multiplyFile"
+      [ "$i" -ne "$m2Cols" ] && printf '\t' >> "$multiplyFile"
+
+    done
+    printf "\n" >> "$multiplyFile"
+
+  done < "$1"
+
+  cat "$multiplyFile"
 }
 
-checkParameters() {
+# The first argument passed to this function is the valid number of arguments to
+# pass to a function, then the following arguments should be every other argument
+# that was passed to that function. We add one to the number in the first argument
+# to confirm whether a correct number of arguments was provided.
+checkArgs() {
   [ "$#" -ne "$(($1 + 1))" ] && { echo "Invalid number of arguments for this operation" >&2; exit 3; }
 }
 
+# Use a case statement to ensure that there is both a command provided and that
+# command entered is valid. For add and multiply commands, we also verify
+# that the number of arguments passed for the command is valid, since we won't
+# accept input from stdin when working with 2 matrices.
 getCommand() {
   [ "$#" -eq "0" ] && { echo "No arguments provided." >&2; exit 1; }
   case $1 in
@@ -171,11 +237,11 @@ getCommand() {
       getMean "${@:2}"
     ;;
     add)
-      checkParameters 2 "${@:2}"
+      checkArgs 2 "${@:2}"
       addMatrices "${@:2}"
     ;;
     multiply)
-      checkParameters 2 "${@:2}"
+      checkArgs 2 "${@:2}"
       multiplyMatrices "${@:2}"
     ;;
     *)
