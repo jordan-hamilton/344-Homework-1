@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# CS 344-400 - Fall 2019
+# Program 1 - Matrices
+# Written by Jordan Hamilton (hamiltj2)
+
 dimsFile="dimsTemp.$$"
 transposeFile="transposeTemp.$$"
 cutFile="cutTemp.$$"
@@ -8,7 +12,7 @@ calcMeanFile="calcMeanTemp.$$"
 addFile="addTemp.$$"
 multiplyFile="multiplyTemp.$$"
 
-# Remove all temp files
+# Remove all temp files following interrupt, hangup, termination and exit signals
 trap 'rm -f $dimsFile $transposeFile $cutFile $meanFile $calcMeanFile $addFile $multiplyFile' INT HUP TERM EXIT
 
 getDims() {
@@ -75,8 +79,9 @@ transposeMatrix() {
     done < "$transposeFile"
 
     printf '\n' >> "$cutFile"
-    # Reset the column we're writing to so we can tab before printing an integer
-    # in all columns after the first column
+
+    # Reset the column we're writing to in our transposed file so we can tab
+    # before printing an integer in all columns after the first column
     colToWrite=1
   done
 
@@ -105,25 +110,25 @@ getMean() {
 
   totalRows=$(getDims "$meanFile" | cut -f1 -d" ")
   totalCols=$(getDims "$meanFile" | cut -f2 -d" ")
-  colToWrite=1
 
-  for ((colToRead = 1; colToRead <= totalCols; colToRead++))
+  # Sum all the value in all rows looking at one fixed column on the provided matrix.
+  for ((col = 1; col <= totalCols; col++))
   do
     sum=0
 
-    # Sum all rows of one fixed column on the provided matrix.
     while read -r line
     do
-      (( sum += "$(echo -n "$line" | cut -d$'\t' -f$colToRead)" ))
+      (( sum += "$(echo -n "$line" | cut -d$'\t' -f$col)" ))
     done < "$meanFile"
 
-    # Calculate the rounded average (using the formula on the assignment page).
+    # Calculate the rounded mean (using the formula on the assignment page).
     avg=$(((sum + (totalRows/2)*( (sum>0)*2-1 )) / totalRows))
 
+    # Output the calculated mean into the column corresponding to the row that
+    # was just looped through in our while loop
     printf "%d" "$avg" >> "$calcMeanFile"
-    [ "$colToWrite" -ne "$totalCols" ] && printf "\t" >> "$calcMeanFile"
+    [ "$col" -ne "$totalCols" ] && printf "\t" >> "$calcMeanFile"
 
-    ((colToWrite++))
   done
 
   printf '\n' >> "$calcMeanFile"
@@ -137,7 +142,6 @@ addMatrices() {
   # Verify the number of rows and columns are exactly the same for both matrices
   [ "$(getDims "$1")" != "$(getDims "$2")" ] && { echo "We couldn't perform this operation on matrices of incompatible dimensions." >&2; exit 11; }
 
-  totalRows=$(getDims "$1" | cut -f1 -d" ")
   totalCols=$(getDims "$1" | cut -f2 -d" ")
   m1Row=1
 
@@ -147,17 +151,20 @@ addMatrices() {
 
     while read -r m2Line
     do
-      # Sum the numbers in the same column if we're looking at the same row in
-      # both matrices, then output the result
+      # Sum the values in the same column if we're also looking at the same row
+      # in both matrices, then output the result
       if [[ "$m1Row" -eq "$m2Row" ]]
       then
+
         for ((colToRead = 1; colToRead <= totalCols; colToRead++))
         do
           m1Num=$(echo -n "$m1Line" | cut -d$'\t' -f$colToRead)
           m2Num=$(echo -n "$m2Line" | cut -d$'\t' -f$colToRead)
+
           printf "%d" "$((m1Num + m2Num))" >> "$addFile"
           [ "$colToRead" -ne "$totalCols" ] && printf '\t' >> "$addFile"
         done
+
         printf '\n' >> "$addFile"
       fi
 
