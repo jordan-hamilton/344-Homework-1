@@ -5,8 +5,9 @@ transposeFile="transposeTemp.$$"
 cutFile="cutTemp.$$"
 meanFile="meanTemp.$$"
 calcMeanFile="calcMeanTemp.$$"
+addFile="addTemp.$$"
 
-trap 'rm -f $dimsFile $transposeFile $cutFile $meanFile $calcMeanFile' INT HUP TERM EXIT
+trap 'rm -f $dimsFile $transposeFile $cutFile $meanFile $calcMeanFile $addFile' INT HUP TERM EXIT
 
 getDims() {
   if [ "$#" -eq "0" ]
@@ -99,7 +100,7 @@ getMean() {
       (( sum += "$(echo -n "$line" | cut -d$'\t' -f$colToRead)" ))
     done < "$meanFile"
 
-    avg=$((($sum + ($totalRows/2)*( ($sum>0)*2-1 )) / $totalRows))
+    avg=$(((sum + (totalRows/2)*( (sum>0)*2-1 )) / totalRows))
     printf "%d" "$avg" >> "$calcMeanFile"
     [ "$colToWrite" -ne "$totalCols" ] && printf "\t" >> "$calcMeanFile"
     ((colToWrite++))
@@ -117,7 +118,10 @@ addMatrices() {
   totalRows=$(getDims "$1" | cut -f1 -d" ")
   totalCols=$(getDims "$1" | cut -f2 -d" ")
 
-
+  while read -r line
+  do
+    echo hey
+  done < "$1"
 
 }
 
