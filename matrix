@@ -117,12 +117,35 @@ addMatrices() {
 
   totalRows=$(getDims "$1" | cut -f1 -d" ")
   totalCols=$(getDims "$1" | cut -f2 -d" ")
+  m1Row=1
 
-  while read -r line
+
+  while read -r m1Line
   do
-    echo hey
+    m2Row=1
+
+    while read -r m2Line
+    do
+
+      if [[ "$m1Row" -eq "$m2Row" ]]
+      then
+        for ((colToRead = 1; colToRead <= totalCols; colToRead++))
+        do
+          m1Num=$(echo -n "$m1Line" | cut -d$'\t' -f$colToRead)
+          m2Num=$(echo -n "$m2Line" | cut -d$'\t' -f$colToRead)
+          printf "%d" "$((m1Num + m2Num))" >> "$addFile"
+          [ "$colToRead" -ne "$totalCols" ] && printf '\t' >> "$addFile"
+        done
+        printf '\n' >> "$addFile"
+      fi
+
+      ((m2Row++))
+    done < "$2"
+
+    ((m1Row++))
   done < "$1"
 
+  cat "$addFile"
 }
 
 multiplyMatrices() {
